@@ -1,0 +1,13 @@
+api_key: 
+api_base: 
+model: gpt3.5-turbo
+temperature: 0
+timeout: 300
+concurrent_num: 5
+input_filename: input.json
+output_dirname: single_save_here
+input_fields:
+  - game
+# WARNING: elements in list of input_fields must be contained in user_prompt.
+sys_prompt: "You are a helpful assistant."
+user_prompt: "Please help me introducing a game:{game}."

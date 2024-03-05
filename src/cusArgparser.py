@@ -3,10 +3,27 @@ from typing import NewType,Iterable,Any
 import yaml
 import sys
 from pathlib import Path
+from dataclasses import field,dataclass
 import dataclasses
 
 DataClass=NewType("DataClass",Any)
 DataClassType=NewType("DataClassType",Any)
+
+@dataclass
+class OpenaiArguments:
+    api_key:str=field(metadata={"help":"openai api key"})
+    api_base:str=field(metadata={"help":"base url for China mainland to request openai"})
+    model:str=field(metadata={"help":"gpt model"})
+    temperature:float=field(metadata={"help":"temperature"})
+    timeout:float=field(metadata={'help':'timeout parameter'})
+
+@dataclass
+class OtherArguments:
+    concurrent_num:int=field(metadata={"help":"concurrent num, aka num of data to split."})
+    input_filename:str=field(metadata={"help":"input filename"})
+    input_fields:list=field(metadata={"help":"indicates input value in data, to replace input article in input prompt"})
+    output_dirname:str=field(metadata={"help":"output dirname"})
+
 
 class CusArgumentParser(ArgumentParser):
     def __init__(self, dataclass_types: DataClassType | Iterable[DataClassType], **kwargs):
@@ -28,7 +45,7 @@ class CusArgumentParser(ArgumentParser):
     def _add_dataclass_arguments(self,dtype:DataClassType):
         parser = self
         for field in dataclasses.fields(dtype):
-            self._parse_known_args(parser,field)
+            self._parse_dataclass_field(parser,field)
 
     def parse_args_into_dataclasses(
             self,
