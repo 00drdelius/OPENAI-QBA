@@ -16,12 +16,15 @@ class OpenaiArguments:
     model:str=field(metadata={"help":"gpt model"})
     temperature:float=field(metadata={"help":"temperature"})
     timeout:float=field(metadata={'help':'timeout parameter'})
+    sys_prompt:str=field(metadata={"help":"system prompt sent to gpt"})
+    user_prompt:str=field(metadata={"help":"user_prompt sent to gpt"})
+    input_fields:list=field(metadata={"help":"indicates input value in data, to replace input article in input prompt"})
 
 @dataclass
 class OtherArguments:
     concurrent_num:int=field(metadata={"help":"concurrent num, aka num of data to split."})
     input_filename:str=field(metadata={"help":"input filename"})
-    input_fields:list=field(metadata={"help":"indicates input value in data, to replace input article in input prompt"})
+    split_dirname:str=field(metadata={"help":"dirname to store splitted data temporarily."})
     output_dirname:str=field(metadata={"help":"output dirname"})
 
 
@@ -93,7 +96,7 @@ class CusArgumentParser(ArgumentParser):
             obj = dtype(**inputs)
             outputs.append(obj)
         if not allow_extra_keys and unused_keys:
-            raise ValueError(f"Some keys are not used by the HfArgumentParser: {sorted(unused_keys)}")
+            raise ValueError(f"Some keys are not used by the CusArgumentParser: {sorted(unused_keys)}")
         return tuple(outputs)
 
     def parse_yaml_file(self, yaml_file: str, allow_extra_keys: bool = False) -> tuple[DataClass, ...]:

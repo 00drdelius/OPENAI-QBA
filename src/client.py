@@ -11,39 +11,16 @@ parent_dir=Path(__file__).parent
 
 # third-party import
 from typing import Union
+from .datastructure import construct_gptDS
 from functools import partial
 from rich.console import Console
 from openai import OpenAI
 console=Console(style="#F7FF00") # bright yellow
 error_console=Console(style="#FF0B03")
 
-class OpenaiClient:
-    """
-    Args:
-    ---
-    api_key: openai api key
-    api_base: openai api base
-    kwargs: extra kwargs used in OpenAI: timeout,max_retries,http_client,etc.
-    """
-    def __init__(self,api_key:str,api_base:str,**kwargs) -> None:
-        self.client=OpenAI(
-                api_key=api_key,
-                base_url=api_base,
-                # http_client=self.proxy_client,
-                **kwargs
-            )
-    
-    @property
-    def models_available(self):
-        ret_li={}
-        li=self.client.models.list()
-        for i in li:
-            if i.owned_by not in ret_li.keys():
-                ret_li[i.owned_by]=[]
-            ret_li[i.owned_by].append(i.id)
-        return ret_li
-
-    def __construct_msgs(self,prompts:Union[str,list]):
+class BaseClient:
+    """Base Client. To fit uncertain model apis required in the future."""
+    def construct_msgs(self,prompts:Union[str,list]):
         """
         Construct msgs sent to gpt models.\n
         system prompt must be set if passed in a list[str]
@@ -87,6 +64,38 @@ class OpenaiClient:
         ### debug area
         return msgs
 
+    def chatapi(self):
+        "abstract method| Must to implemented by subclass| To "
+    
+    def embdapi(self):
+        "abstract method| Must to implemented by subclass|"
+
+class OpenaiClient(BaseClient):
+    """
+    Args:
+    ---
+    api_key: openai api key
+    api_base: openai api base
+    kwargs: extra kwargs used in OpenAI: timeout,max_retries,http_client,etc.
+    """
+    def __init__(self,api_key:str,api_base:str,**kwargs) -> None:
+        self.client=OpenAI(
+                api_key=api_key,
+                base_url=api_base,
+                # http_client=self.proxy_client,
+                **kwargs
+            )
+    
+    @property
+    def models_available(self):
+        ret_li={}
+        li=self.client.models.list()
+        for i in li:
+            if i.owned_by not in ret_li.keys():
+                ret_li[i.owned_by]=[]
+            ret_li[i.owned_by].append(i.id)
+        return ret_li
+
     def __sync_gpt_chatapi(
             self,
             prompt: str | list[str] | list[dict[str,str]],
@@ -105,7 +114,7 @@ class OpenaiClient:
         sys prompt is automatically added in the first place.
         retries: request retries time supported
         
-        others: please refer to openai api documentation: https://platform.openai.com/docs/api-reference/chat/create
+        **others: please refer to openai api documentation: https://platform.openai.com/docs/api-reference/chat/create
         """
         retries=kwargs.pop("retries",0)
         response_format=(
@@ -121,11 +130,24 @@ class OpenaiClient:
             **kwargs
         )
         while retries>=0:
-            msgs = self.__construct_msgs(prompts=prompt)
+            msgs = self.construct_msgs(prompts=prompt)
             try:
                 chat_completion=chat_completion_freeze(messages=msgs)
             except Exception as exc:
                 error_console.print(f"openai requestError:{exc}. Retry...",style="#FF7F7F")
+                if retries==0:
+                    error_console.print(
+                        "#**********BREAKING ERROR**************\n"
+                        "#request reaches max retries.\n"
+                       f"#Return gpt output: {exc}\n"
+                        "#Auto breaking.."
+                        "#**********BREAKING ERROR**************"
+                    )
+                    error_completion=construct_gptDS(stream=stream,response=str(exc),model=model)
+                    if stream:
+                        yield 
+                    else:
+                        yield error_completion
                 retries-=1
                 continue
             else:
@@ -137,7 +159,7 @@ class OpenaiClient:
         else:
             yield chat_completion
 
-    def gpt_chatapi(
+    def chatapi(
             self,
             prompt: str | list[str] | list[dict[str,str]],
             count_tokens=False,
@@ -190,7 +212,7 @@ class OpenaiClient:
         output['content']=text_output
         return output
 
-    def gpt_embdapi(
+    def embdapi(
             self,
             prompt:str,
             count_tokens=False,

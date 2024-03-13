@@ -1,24 +1,22 @@
-import shortuuid
+import sys
+import os
 import tiktoken
+from .cusArgparser import CusArgumentParser,OpenaiArguments,OtherArguments
 
-def generate_uuid(uuid_list):
-    uuid=""
-    while uuid in uuid_list or uuid=="":
-        uuid=shortuuid.uuid()
-    return uuid
-
-def give_uuids(data:dict):
-    uuids=[]
-    for i in data:
-        i['uuid']=generate_uuid(uuids)
-        uuids.append(i['uuid'])
-    return data
-
-def construct_prompts(args,value:dict):
+def construct_prompts(args,fields:dict):
     sys_prompt:str=args.sys_prompt
     user_prompt:str=args.user_prompt
-    user_prompt.format(**value)
+    user_prompt.format(**fields)
     return sys_prompt,user_prompt
+
+def load_argparser():
+    parser=CusArgumentParser((OpenaiArguments,OtherArguments))
+    print(sys.argv)
+    if sys.argv[-1].endswith(".yaml"):
+        openai_args,others_args=parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[-1]))
+    else:
+        openai_args,others_args=parser.parse_args_into_dataclasses()
+    return openai_args,others_args
 
 def statistics(args):
     pass
@@ -26,3 +24,5 @@ def statistics(args):
 def estimator(args):
     pass
 
+if __name__=="__main__":
+    load_argparser()
